@@ -1,0 +1,67 @@
+name: Deploy to AKS
+
+on:
+  push:
+    branches:
+      - main 
+
+jobs:
+  build-and-push:
+    name: Build & Push to GHCR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Set Commit ID as Tag
+        run: echo "COMMIT_ID=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker Image for service-hello
+        env:
+          COMMIT_ID: ${{ env.COMMIT_ID }}
+          CONTAINER_REGISTRY: ${{ secrets.CONTAINER_REGISTRY }}
+        run: |
+          docker build -t ghcr.io/ilhamellya/$CONTAINER_REGISTRY:$COMMIT_ID -f Dockerfile .
+
+      - name: Push Docker Image to GitHub Container Registry
+        env:
+          COMMIT_ID: ${{ env.COMMIT_ID }}
+          CONTAINER_REGISTRY: ${{ secrets.CONTAINER_REGISTRY }}
+        run: |
+          docker push ghcr.io/ilhamellya/$CONTAINER_REGISTRY:$COMMIT_ID
+
+  deploy-to-aks:
+    name: Deploy to AKS  
+    runs-on: ubuntu-latest 
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Commit ID as Tag
+        run: echo "COMMIT_ID=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+
+      - name: Login to GHCR
+        run: echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Set The Cluster Subscription
+        run: az account set --subscription ${{ secrets.AKS_SUBSCRIPTION }}
+
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }}
+
+      - name: Deploy to AKS
+        env:
+          CONTAINER_REGISTRY: ${{ secrets.CONTAINER_REGISTRY }}
+          COMMIT_ID: ${{ env.COMMIT_ID }}
+        run: |
+          kubectl set image deployment/research-ilham research-ilham=ghcr.io/ilhamellya/$CONTAINER_REGISTRY:$COMMIT_ID -n devops-2
