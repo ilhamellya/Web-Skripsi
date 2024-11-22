@@ -64,4 +64,4 @@ jobs:
           CONTAINER_REGISTRY: ${{ secrets.CONTAINER_REGISTRY }}
           COMMIT_ID: ${{ env.COMMIT_ID }}
         run: |
-          kubectl set image deployment/research-ilham research-ilham=ghcr.io/ilhamellya/$CONTAINER_REGISTRY:$COMMIT_ID -n devops-2
+          kubectl set image deployment/researchilham research-ilham=ghcr.io/ilhamellya/$CONTAINER_REGISTRY:$COMMIT_ID -n devops-2
