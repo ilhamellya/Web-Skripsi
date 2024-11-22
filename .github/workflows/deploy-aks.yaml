@@ -27,7 +27,7 @@ jobs:
           COMMIT_ID: ${{ env.COMMIT_ID }}
           CONTAINER_REGISTRY: ${{ secrets.CONTAINER_REGISTRY }}
         run: |
-          docker build -t ghcr.io/ilhamellya/$CONTAINER_REGISTRY:$COMMIT_ID -f Dockerfile .
+          docker build -t ghcr.io/ilhamellya/$CONTAINER_REGISTRY:$COMMIT_ID -f ./Dockerfile .
 
       - name: Push Docker Image to GitHub Container Registry
         env:
